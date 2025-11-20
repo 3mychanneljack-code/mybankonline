@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>MyBank Control Center</title>
+  <style>
+    body { font-family: system-ui, Arial; padding: 12px; max-width: 1000px; margin:auto }
+    input, select { margin:6px 0; padding:6px; }
+    button { padding:6px 10px; margin:6px 0; }
+    table { width:100%; border-collapse: collapse; margin-top:12px; }
+    th, td { border:1px solid #ddd; padding:8px; text-align:left; }
+    th { background:#f4f4f4 }
+    .row { display:flex; gap:8px; align-items:center; }
+  </style>
+</head>
+<body>
+  <h2>MyBank Control Center</h2>
+
+  <div id="login">
+    <h3>Admin Login</h3>
+    <input id="adminUser" placeholder="Admin username">
+    <input id="adminPass" placeholder="Admin password" type="password">
+    <button onclick="adminLogin()">Login</button>
+  </div>
+
+  <div id="control" style="display:none">
+    <div class="row">
+      <button onclick="loadUsers()">Load users</button>
+      <button onclick="loadTransactions()">Load transactions</button>
+      <button onclick="loadBroadcasts()">Load broadcasts</button>
+    </div>
+
+    <h3>Create user</h3>
+    <div class="row">
+      <input id="c_user" placeholder="username">
+      <input id="c_pass" placeholder="password" type="password">
+      <input id="c_bal" placeholder="initial balance" type="number" value="0">
+      <label><input id="c_isadmin" type="checkbox"> is admin</label>
+      <button onclick="adminCreateUser()">Create</button>
+    </div>
+
+    <h3>Users</h3>
+    <div id="usersWrap"></div>
+
+    <h3>Transactions</h3>
+    <div id="txWrap"></div>
+
+    <h3>Broadcast</h3>
+    <div class="row">
+      <input id="b_msg" placeholder="message" style="flex:1">
+      <button onclick="adminBroadcast()">Send Broadcast</button>
+    </div>
+    <div id="b_out"></div>
+  </div>
+
+<script>
+  const BACKEND_URL = "https://mybankonline.onrender.com";
+  let adminCreds = {};
+
+  function showError(e){ alert(e); }
+
+  async function adminLogin(){
+    const adminUsername = document.getElementById("adminUser").value;
+    const adminPassword = document.getElementById("adminPass").value;
+    try {
+      const res = await fetch(BACKEND_URL + "/api/admin/login", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({ adminUsername, adminPassword })
+      });
+      const data = await res.json();
+      if (data.success) {
+        adminCreds = { adminUsername, adminPassword };
+        document.getElementById("login").style.display = "none";
+        document.getElementById("control").style.display = "block";
+      } else showError(data.error || JSON.stringify(data));
+    } catch(e){ showError(e.message) }
+  }
+</script>
+</body>
+</html>

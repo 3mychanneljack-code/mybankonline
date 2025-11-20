@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>MyBank (Embed)</title>
+  <style>
+    body { font-family: system-ui, Arial; padding: 12px; max-width: 720px; margin:auto }
+    input { margin:6px 0; padding:6px; display:block;}
+    button { padding:6px 10px; margin:6px 0;}
+    .small { font-size:0.9rem; color:#444 }
+  </style>
+</head>
+<body>
+  <h2>MyBank</h2>
+  <div id="auth">
+    <h3>Login</h3>
+    <input id="loginUser" placeholder="Username">
+    <input id="loginPass" placeholder="Password" type="password">
+    <button onclick="login()">Login</button>
+
+    <h3>Create Account</h3>
+    <input id="newUser" placeholder="Username">
+    <input id="newPass" placeholder="Password" type="password">
+    <button onclick="createUser()">Create</button>
+
+    <hr>
+    <small class="small">Admin: open MyBank Control Center separately.</small>
+  </div>
+
+  <div id="dash" style="display:none">
+    <h3>Welcome, <span id="who"></span></h3>
+    <p>Balance: <strong><span id="bal">0</span></strong> Niftoes</p>
+    <button onclick="refresh()">Refresh</button>
+
+    <h4>Send Niftoes</h4>
+    <input id="sendTo" placeholder="recipient username">
+    <input id="sendAmount" placeholder="amount (max 20)" type="number" min="1" max="20">
+    <button onclick="send()">Send</button>
+
+    <h4>Latest Notices</h4>
+    <div id="broadcasts"></div>
+
+    <br><br>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+<script>
+  const BACKEND_URL = "https://mybankonline.onrender.com";
+
+  function showError(e){ alert(e); }
+
+  async function createUser(){
+    try {
+      let username = document.getElementById("newUser").value;
+      let password = document.getElementById("newPass").value;
+      const res = await fetch(BACKEND_URL + "/api/createUser", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({username,password})
+      });
+      const data = await res.json();
+      if (data.success) alert("Created! Now login.");
+      else showError(data.error || JSON.stringify(data));
+    } catch(e){ showError(e.message) }
+  }
+
+  async function login(){
+    try {
+      let username = document.getElementById("loginUser").value;
+      let password = document.getElementById("loginPass").value;
+      const res = await fetch(BACKEND_URL + "/api/login", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({username,password})
+      });
+      const data = await res.json();
+      if (data.success){
+        localStorage.mybankUser = username;
+        document.getElementById("who").innerText = username;
+        document.getElementById("auth").style.display = "none";
+        document.getElementById("dash").style.display = "block";
+        refresh();
+        loadBroadcasts();
+      } else showError(data.error);
+    } catch(e){ showError(e.message) }
+  }
+
+  async function refresh(){
+    try {
+      const username = localStorage.mybankUser;
+      const res = await fetch(BACKEND_URL + "/api/balance", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({ username })
+      });
+      const data = await res.json();
+      if (data.balance !== undefined) document.getElementById("bal").innerText = data.balance;
+      else showError(data.error || JSON.stringify(data));
+    } catch(e){ showError(e.message) }
+  }
+
+  async function send(){
+    try {
+      const from = localStorage.mybankUser;
+      const to = document.getElementById("sendTo").value;
+      const amount = Number(document.getElementById("sendAmount").value);
+      const res = await fetch(BACKEND_URL + "/api/send", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({ from, to, amount })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert("Sent!");
+        refresh();
+      } else showError(data.error);
+    } catch(e){ showError(e.message) }
+  }
+
+  async function loadBroadcasts(){
+    try {
+      const res = await fetch(BACKEND_URL + "/api/broadcasts");
+      const data = await res.json();
+      const el = document.getElementById("broadcasts");
+      el.innerHTML = data.map(b => `<div><small>${new Date(b.created_at).toLocaleString()} — ${escapeHtml(b.message)}</small></div>`).join("");
+    } catch(e){ /* ignore */ }
+  }
+
+  function logout(){
+    localStorage.removeItem("mybankUser");
+    location.reload();
+  }
+
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  if (localStorage.mybankUser){
+    document.getElementById("who").innerText = localStorage.mybankUser;
+    document.getElementById("auth").style.display = "none";
+    document.getElementById("dash").style.display = "block";
+    refresh();
+    loadBroadcasts();
+  }
+</script>
+</body>
+</html>
